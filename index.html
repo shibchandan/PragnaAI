@@ -1,0 +1,2487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PragnaAI - Vector Retrieval Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f4f7fb;
+  --bg-deep: #08121e;
+  --panel: rgba(10, 19, 32, 0.9);
+  --panel-soft: rgba(14, 25, 40, 0.72);
+  --panel-border: rgba(145, 176, 214, 0.15);
+  --text: #eff8ff;
+  --text-soft: rgba(231, 244, 255, 0.74);
+  --text-dim: rgba(190, 214, 238, 0.42);
+  --ink: #0e1623;
+  --cyan: #49d6ff;
+  --aqua: #11b7a7;
+  --blue: #6ea8ff;
+  --rose: #ff7aa2;
+  --amber: #ffbf5a;
+  --mint: #73f0aa;
+  --lime: #b7ff8a;
+  --shadow: 0 30px 80px rgba(3, 10, 21, 0.46);
+  --radius-xl: 28px;
+  --radius-lg: 22px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
+  --mono: "IBM Plex Mono", "Courier New", monospace;
+  --sans: "Space Grotesk", "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--sans);
+  color: var(--text);
+  background:
+    radial-gradient(circle at top left, rgba(73, 214, 255, 0.16), transparent 26%),
+    radial-gradient(circle at 85% 12%, rgba(255, 191, 90, 0.14), transparent 24%),
+    radial-gradient(circle at 50% 100%, rgba(17, 183, 167, 0.12), transparent 30%),
+    linear-gradient(180deg, #0c1725 0%, #08111b 48%, #060d16 100%);
+  overflow: hidden;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 120px 120px;
+  pointer-events: none;
+  opacity: 0.26;
+}
+
+.app-shell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  z-index: 1;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  padding: 24px 28px 18px;
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: clamp(28px, 4vw, 42px);
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+  font-weight: 700;
+}
+
+.brand h1 span {
+  background: linear-gradient(90deg, #dff8ff 0%, var(--cyan) 42%, var(--amber) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.brand p {
+  margin: 0;
+  max-width: 620px;
+  color: var(--text-soft);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.header-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.pill,
+.algo-pill,
+.tab-btn,
+.ghost-btn,
+.primary-btn,
+.secondary-btn,
+.accent-btn {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-family: var(--mono);
+  letter-spacing: 0.08em;
+}
+
+.pill,
+.algo-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-soft);
+  font-size: 11px;
+  text-transform: uppercase;
+  border-color: rgba(135, 167, 203, 0.16);
+}
+
+.pill.ok {
+  color: #dfffea;
+  border-color: rgba(115, 240, 170, 0.35);
+  background: rgba(115, 240, 170, 0.08);
+}
+
+.pill.err {
+  color: #ffe4ee;
+  border-color: rgba(255, 122, 162, 0.38);
+  background: rgba(255, 122, 162, 0.09);
+}
+
+.pill.glow {
+  color: var(--text);
+  border-color: rgba(73, 214, 255, 0.35);
+  background: rgba(73, 214, 255, 0.08);
+  box-shadow: 0 0 24px rgba(73, 214, 255, 0.15);
+}
+
+.main-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr) 400px;
+  gap: 20px;
+  padding: 0 20px 20px;
+  min-height: 0;
+}
+
+.rail,
+.right-panel,
+.stage-card,
+.scene-card,
+.panel-card {
+  background: var(--panel-soft);
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+}
+
+.rail,
+.right-panel {
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  min-height: 0;
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+}
+
+.rail-scroll,
+.right-scroll {
+  overflow: auto;
+  padding: 22px;
+}
+
+.right-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.section-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.section-block:last-child {
+  margin-bottom: 0;
+}
+
+.section-title {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.card {
+  background: rgba(5, 12, 20, 0.56);
+  border: 1px solid rgba(139, 170, 205, 0.12);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+}
+
+.card.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.control-row {
+  display: flex;
+  gap: 10px;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--text-soft);
+  font-size: 13px;
+}
+
+input[type="text"],
+select,
+textarea {
+  width: 100%;
+  border: 1px solid rgba(139, 170, 205, 0.16);
+  border-radius: 14px;
+  background: rgba(3, 9, 17, 0.74);
+  color: var(--text);
+  padding: 14px 15px;
+  font-size: 14px;
+  font-family: var(--sans);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+textarea {
+  min-height: 120px;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+input[type="text"]::placeholder,
+textarea::placeholder {
+  color: rgba(194, 215, 238, 0.38);
+}
+
+input[type="text"]:focus,
+select:focus,
+textarea:focus {
+  border-color: rgba(73, 214, 255, 0.42);
+  box-shadow: 0 0 0 4px rgba(73, 214, 255, 0.08);
+}
+
+input[type="range"] {
+  width: 100%;
+  accent-color: var(--cyan);
+}
+
+.algo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.algo-pill,
+.tab-btn,
+.ghost-btn,
+.primary-btn,
+.secondary-btn,
+.accent-btn,
+.delete-btn {
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.algo-pill {
+  justify-content: center;
+  padding: 11px 10px;
+  text-align: center;
+}
+
+.algo-pill.active {
+  color: #eaffff;
+  border-color: rgba(73, 214, 255, 0.5);
+  background: linear-gradient(180deg, rgba(73, 214, 255, 0.12), rgba(17, 183, 167, 0.12));
+  box-shadow: 0 14px 28px rgba(11, 41, 58, 0.3);
+}
+
+.legend-list {
+  display: grid;
+  gap: 10px;
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-soft);
+}
+
+.legend-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  box-shadow: 0 0 14px currentColor;
+}
+
+.primary-btn,
+.accent-btn,
+.secondary-btn,
+.ghost-btn {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.primary-btn {
+  background: linear-gradient(135deg, rgba(73, 214, 255, 0.9), rgba(17, 183, 167, 0.9));
+  box-shadow: 0 18px 40px rgba(16, 99, 118, 0.34);
+}
+
+.accent-btn {
+  background: linear-gradient(135deg, rgba(255, 191, 90, 0.9), rgba(255, 122, 162, 0.9));
+  box-shadow: 0 18px 40px rgba(122, 54, 46, 0.32);
+}
+
+.secondary-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(139, 170, 205, 0.18);
+}
+
+.ghost-btn {
+  width: auto;
+  padding: 11px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(139, 170, 205, 0.18);
+  color: var(--text-soft);
+}
+
+.delete-btn {
+  width: auto;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 122, 162, 0.26);
+  background: rgba(255, 122, 162, 0.08);
+  color: #ffd9e4;
+  font-family: var(--mono);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.primary-btn:hover,
+.accent-btn:hover,
+.secondary-btn:hover,
+.ghost-btn:hover,
+.algo-pill:hover,
+.delete-btn:hover,
+.tab-btn:hover {
+  transform: translateY(-1px);
+}
+
+.k-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--text-soft);
+  font-size: 13px;
+}
+
+.stage {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-height: 0;
+}
+
+.stage-card {
+  border-radius: var(--radius-xl);
+  padding: 24px;
+}
+
+.hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.hero-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.hero-copy h2 {
+  margin: 0;
+  font-size: clamp(28px, 4vw, 52px);
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+}
+
+.hero-copy p {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 14px;
+  line-height: 1.75;
+  max-width: 720px;
+}
+
+.hero-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.metric-card {
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  background: rgba(5, 12, 20, 0.62);
+  border: 1px solid rgba(139, 170, 205, 0.12);
+}
+
+.metric-card .metric-label {
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.metric-card .metric-value {
+  margin-top: 14px;
+  font-size: clamp(24px, 4vw, 36px);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.metric-card .metric-sub {
+  margin-top: 10px;
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.scene-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  min-height: 0;
+}
+
+.scene-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 22px 0;
+}
+
+.scene-topbar h3 {
+  margin: 8px 0 0;
+  font-size: 28px;
+  letter-spacing: -0.04em;
+}
+
+.scene-topbar p {
+  margin: 8px 0 0;
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1.6;
+  max-width: 540px;
+}
+
+.scene-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.scene-shell {
+  position: relative;
+  flex: 1;
+  min-height: 520px;
+  padding: 20px;
+}
+
+#scatter {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at top, rgba(73, 214, 255, 0.08), transparent 28%),
+    linear-gradient(180deg, rgba(4, 10, 18, 0.96) 0%, rgba(4, 9, 15, 1) 100%);
+  border: 1px solid rgba(123, 156, 193, 0.12);
+}
+
+.scene-overlay {
+  pointer-events: none;
+  position: absolute;
+  inset: 36px 36px 34px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.scene-badge-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.scene-copy {
+  max-width: 380px;
+}
+
+.scene-copy .scene-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(139, 170, 205, 0.18);
+}
+
+.scene-copy h4 {
+  margin: 12px 0 8px;
+  font-size: 30px;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.scene-copy p {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.scene-stats {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.scene-stat {
+  padding: 12px 14px;
+  min-width: 110px;
+  border-radius: 18px;
+  background: rgba(4, 11, 19, 0.68);
+  border: 1px solid rgba(139, 170, 205, 0.14);
+}
+
+.scene-stat .label {
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.scene-stat .value {
+  margin-top: 10px;
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.scene-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-end;
+}
+
+.hint-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.hint-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  background: rgba(4, 11, 19, 0.64);
+  border: 1px solid rgba(139, 170, 205, 0.14);
+}
+
+.legend-inline {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.legend-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-soft);
+}
+
+.tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 18px 18px 0;
+}
+
+.tab-btn {
+  padding: 13px 10px;
+  background: rgba(255, 255, 255, 0.035);
+  border-color: rgba(139, 170, 205, 0.16);
+  color: var(--text-soft);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.tab-btn.active {
+  background: linear-gradient(135deg, rgba(73, 214, 255, 0.14), rgba(17, 183, 167, 0.14));
+  border-color: rgba(73, 214, 255, 0.35);
+  color: var(--text);
+  box-shadow: 0 16px 36px rgba(8, 34, 43, 0.3);
+}
+
+.pane {
+  display: none;
+}
+
+.pane.active {
+  display: block;
+}
+
+.search-pane-grid,
+.docs-pane-grid,
+.rag-pane-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.stat-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.mini-stat {
+  padding: 15px;
+  border-radius: var(--radius-lg);
+  background: rgba(5, 12, 20, 0.56);
+  border: 1px solid rgba(139, 170, 205, 0.12);
+}
+
+.mini-stat .label {
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.mini-stat .value {
+  margin-top: 12px;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.mini-stat .sub {
+  margin-top: 8px;
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.results-list,
+.doc-list,
+.chat-history,
+.layers-list,
+.benchmark-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.result-card,
+.doc-card,
+.chat-card {
+  border-radius: var(--radius-lg);
+  background: rgba(5, 12, 20, 0.56);
+  border: 1px solid rgba(139, 170, 205, 0.12);
+  padding: 16px;
+}
+
+.result-rank {
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--text-dim);
+}
+
+.result-title,
+.doc-title {
+  margin-top: 10px;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.result-foot,
+.doc-foot {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.badge-soft {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(139, 170, 205, 0.16);
+}
+
+.distance {
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.empty-state,
+.status-note {
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(16, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 16px;
+}
+
+.profile-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-bar .rail {
+  position: relative;
+  height: 100px;
+  width: 100%;
+  padding: 4px 0;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid rgba(139, 170, 205, 0.08);
+}
+
+.profile-bar .fill {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+  border-radius: 999px;
+  box-shadow: 0 0 18px currentColor;
+}
+
+.profile-bar span {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text-dim);
+}
+
+.benchmark-row,
+.layer-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.benchmark-head,
+.layer-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.bar-track {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: inherit;
+}
+
+.status-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.status-panel strong {
+  font-size: 15px;
+}
+
+.status-panel p {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.status-panel p code,
+.chat-meta,
+.doc-meta,
+.muted-code {
+  font-family: var(--mono);
+}
+
+.doc-preview {
+  margin-top: 10px;
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.doc-meta {
+  color: var(--text-dim);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.chat-history {
+  min-height: 260px;
+}
+
+.chat-q {
+  align-self: flex-start;
+  max-width: 90%;
+  padding: 14px 16px;
+  border-radius: 18px 18px 18px 6px;
+  background: rgba(73, 214, 255, 0.09);
+  border: 1px solid rgba(73, 214, 255, 0.2);
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.chat-card {
+  align-self: stretch;
+}
+
+.chat-meta {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-dim);
+}
+
+.chat-answer {
+  margin-top: 12px;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+
+.ctx-wrap {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(139, 170, 205, 0.12);
+}
+
+.ctx-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--text-dim);
+}
+
+.ctx-chip-row {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ctx-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: auto;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(73, 214, 255, 0.2);
+  background: rgba(73, 214, 255, 0.08);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.ctx-panel {
+  display: none;
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(4, 11, 19, 0.64);
+  border: 1px solid rgba(139, 170, 205, 0.12);
+  color: var(--text-soft);
+  font-size: 12px;
+  line-height: 1.75;
+  white-space: pre-wrap;
+}
+
+.thinking {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-soft);
+  font-size: 13px;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(73, 214, 255, 0.2);
+  border-top-color: var(--cyan);
+  animation: spin 0.8s linear infinite;
+}
+
+#hoverCard {
+  position: fixed;
+  display: none;
+  max-width: 260px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(5, 12, 20, 0.92);
+  border: 1px solid rgba(139, 170, 205, 0.2);
+  box-shadow: var(--shadow);
+  pointer-events: none;
+  z-index: 20;
+}
+
+#hoverCard .hover-kind {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+#hoverCard .hover-title {
+  margin-top: 8px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 170, 205, 0.22);
+  border-radius: 999px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 1480px) {
+  .main-grid {
+    grid-template-columns: 300px minmax(0, 1fr) 360px;
+  }
+}
+
+@media (max-width: 1280px) {
+  body {
+    overflow: auto;
+  }
+
+  .main-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .topbar {
+    flex-direction: column;
+  }
+
+  .header-meta {
+    justify-content: flex-start;
+  }
+
+  .hero-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .scene-shell {
+    min-height: 460px;
+  }
+}
+
+@media (max-width: 720px) {
+  .topbar {
+    padding: 20px 16px 14px;
+  }
+
+  .main-grid {
+    gap: 16px;
+    padding: 0 12px 12px;
+  }
+
+  .rail-scroll,
+  .right-scroll {
+    padding: 18px;
+  }
+
+  .stage-card,
+  .scene-topbar,
+  .scene-shell {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .hero-metrics,
+  .stat-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .scene-badge-row,
+  .scene-foot {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .scene-stats,
+  .legend-inline {
+    justify-content: flex-start;
+  }
+
+  .algo-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <header class="topbar">
+    <div class="brand">
+      <div class="eyebrow">Vector Retrieval Studio</div>
+      <h1><span>PragnaAI</span></h1>
+      <p>Explore semantic neighborhoods in an interactive 3D field, compare HNSW against KD-Tree and brute force, embed your own documents, and ask grounded questions against a local LLM.</p>
+    </div>
+    <div class="header-meta">
+      <span class="pill glow">3D semantic field</span>
+      <span class="pill">HNSW</span>
+      <span class="pill">KD-tree</span>
+      <span class="pill">Brute force</span>
+      <span class="pill" id="ollamaBadge">Checking Ollama</span>
+      <span class="pill" id="statsLabel">20 demo vectors - 16 dims</span>
+    </div>
+  </header>
+
+  <main class="main-grid">
+    <aside class="rail">
+      <div class="rail-scroll">
+        <div class="section-block">
+          <div class="section-title">Query</div>
+          <div class="card stack">
+            <label>
+              Search the demo vector space
+              <input type="text" id="qInput" placeholder="binary tree, sushi, basketball">
+            </label>
+            <button class="primary-btn" onclick="runSearch()">Search</button>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-title">Algorithm</div>
+          <div class="algo-grid">
+            <button class="algo-pill active" data-algo="hnsw" onclick="setAlgo(this)">HNSW</button>
+            <button class="algo-pill" data-algo="kdtree" onclick="setAlgo(this)">KD-tree</button>
+            <button class="algo-pill" data-algo="bruteforce" onclick="setAlgo(this)">Brute</button>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-title">Distance Metric</div>
+          <div class="card stack">
+            <label>
+              Metric
+              <select id="metric">
+                <option value="cosine">Cosine similarity</option>
+                <option value="euclidean">Euclidean distance</option>
+                <option value="manhattan">Manhattan distance</option>
+              </select>
+            </label>
+            <div>
+              <div class="k-row">
+                <span>Top-K</span>
+                <strong id="kLabel">5</strong>
+              </div>
+              <input type="range" id="kSlider" min="1" max="10" value="5">
+            </div>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-title">Semantic Legend</div>
+          <div class="card">
+            <div class="legend-list">
+              <div class="legend-row"><span class="legend-dot" style="color:#49d6ff;background:#49d6ff"></span>CS / Algorithms</div>
+              <div class="legend-row"><span class="legend-dot" style="color:#ff7aa2;background:#ff7aa2"></span>Mathematics</div>
+              <div class="legend-row"><span class="legend-dot" style="color:#ffbf5a;background:#ffbf5a"></span>Food / Cooking</div>
+              <div class="legend-row"><span class="legend-dot" style="color:#73f0aa;background:#73f0aa"></span>Sports / Games</div>
+              <div class="legend-row"><span class="legend-dot" style="color:#b7ff8a;background:#b7ff8a"></span>Document projections</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-title">Insert Demo Vector</div>
+          <div class="card stack">
+            <label>
+              Description
+              <input type="text" id="addMeta" placeholder="Describe a new semantic point">
+            </label>
+            <label>
+              Category
+              <select id="addCat">
+                <option value="cs">CS / Algorithms</option>
+                <option value="math">Mathematics</option>
+                <option value="food">Food / Cooking</option>
+                <option value="sports">Sports / Games</option>
+              </select>
+            </label>
+            <button class="secondary-btn" onclick="addVector()">Insert point</button>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-title">Benchmark</div>
+          <div class="card stack">
+            <div class="status-note">Run the same query across all three search strategies and compare their latency.</div>
+            <button class="accent-btn" onclick="runBenchmark()">Compare all algorithms</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <section class="stage">
+      <div class="stage-card">
+        <div class="hero-grid">
+          <div class="hero-copy">
+            <div class="eyebrow">Interactive retrieval cockpit</div>
+            <h2>Orbit the semantic space instead of staring at a flat scatter plot.</h2>
+            <p>The center visualization now renders a 3D projection of the vector field. Drag to rotate, scroll to zoom, and watch document chunks land directly inside the same semantic world as your demo vectors.</p>
+          </div>
+          <div class="hero-metrics">
+            <div class="metric-card">
+              <div class="metric-label">Core search</div>
+              <div class="metric-value" id="heroAlgo">HNSW</div>
+              <div class="metric-sub">Switch between HNSW, KD-tree, and brute force without leaving the scene.</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Grounded RAG</div>
+              <div class="metric-value" id="heroGrounding">Ready</div>
+              <div class="metric-sub">Answers stay tied to retrieved documents and report when no grounded match exists.</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Projection</div>
+              <div class="metric-value">3D</div>
+              <div class="metric-sub">Semantic points, query anchors, and live highlights all share one orbitable view.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="scene-card">
+        <div class="scene-topbar">
+          <div>
+            <div class="eyebrow">Center stage</div>
+            <h3>3D semantic field</h3>
+            <p id="sceneSubtitle">Hover a point to inspect it. Search results glow brighter and pull a query anchor into place.</p>
+          </div>
+          <div class="scene-actions">
+            <button class="ghost-btn" onclick="resetView()">Reset view</button>
+            <button class="ghost-btn" id="spinBtn" onclick="toggleSpin()">Pause spin</button>
+          </div>
+        </div>
+        <div class="scene-shell">
+          <canvas id="scatter"></canvas>
+          <div class="scene-overlay">
+            <div class="scene-badge-row">
+              <div class="scene-copy">
+                <div class="scene-tag" id="sceneTag">Live retrieval scene</div>
+                <h4 id="sceneTitle">Semantic landscape</h4>
+                <p id="sceneBody">Drag to orbit. Scroll to zoom. Demo vectors, documents, and active query neighborhoods all live in the same coordinate space.</p>
+              </div>
+              <div class="scene-stats">
+                <div class="scene-stat">
+                  <div class="label">Visible points</div>
+                  <div class="value" id="sceneCount">20</div>
+                </div>
+                <div class="scene-stat">
+                  <div class="label">Camera</div>
+                  <div class="value" id="cameraState">1.15x</div>
+                </div>
+                <div class="scene-stat">
+                  <div class="label">Highlighted</div>
+                  <div class="value" id="highlightCount">0</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="scene-foot">
+              <div class="hint-list">
+                <span class="hint-chip">drag to orbit</span>
+                <span class="hint-chip">scroll to zoom</span>
+                <span class="hint-chip">green points are document projections</span>
+              </div>
+              <div class="legend-inline">
+                <span class="legend-chip"><span class="legend-dot" style="color:#49d6ff;background:#49d6ff"></span>CS</span>
+                <span class="legend-chip"><span class="legend-dot" style="color:#ff7aa2;background:#ff7aa2"></span>Math</span>
+                <span class="legend-chip"><span class="legend-dot" style="color:#ffbf5a;background:#ffbf5a"></span>Food</span>
+                <span class="legend-chip"><span class="legend-dot" style="color:#73f0aa;background:#73f0aa"></span>Sports</span>
+                <span class="legend-chip"><span class="legend-dot" style="color:#b7ff8a;background:#b7ff8a"></span>Docs</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="right-panel">
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="search" onclick="switchTab('search', this)">Search</button>
+        <button class="tab-btn" data-tab="docs" onclick="switchTab('docs', this)">Documents</button>
+        <button class="tab-btn" data-tab="rag" onclick="switchTab('rag', this)">Ask AI</button>
+      </div>
+      <div class="right-scroll">
+        <section class="pane active" id="pane-search">
+          <div class="search-pane-grid">
+            <div class="stat-strip">
+              <div class="mini-stat">
+                <div class="label">Search latency</div>
+                <div class="value" id="latBig">--</div>
+                <div class="sub" id="latSub">Run a query to inspect the active algorithm.</div>
+              </div>
+              <div class="mini-stat">
+                <div class="label">Query profile</div>
+                <div class="value" id="queryMode">Ready</div>
+                <div class="sub" id="queryMeta">The next search will update the 3D anchor and result neighborhood.</div>
+              </div>
+            </div>
+
+            <div class="panel-card card stack">
+              <div class="section-title">Top Matches</div>
+              <div class="results-list" id="results">
+                <div class="empty-state">Run a search to see the nearest semantic neighbors.</div>
+              </div>
+            </div>
+
+            <div class="panel-card card stack">
+              <div class="section-title">Embedding Profile</div>
+              <div class="status-note">The search phrase is transformed into a quick 16D demo embedding so you can see which semantic bands are lighting up.</div>
+              <div class="profile-grid" id="embeddingProfile"></div>
+            </div>
+
+            <div class="panel-card card stack">
+              <div class="section-title">Algorithm Comparison</div>
+              <div class="benchmark-list" id="benchBars">
+                <div class="empty-state">Benchmark data appears here after you run Compare all algorithms.</div>
+              </div>
+            </div>
+
+            <div class="panel-card card stack">
+              <div class="section-title">HNSW Layers</div>
+              <div class="layers-list" id="layers">
+                <div class="empty-state">Loading graph structure...</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="pane" id="pane-docs">
+          <div class="docs-pane-grid">
+            <div class="panel-card card stack">
+              <div class="section-title">Ollama Status</div>
+              <div class="status-panel" id="ollamaStatus">
+                <strong>Checking local models...</strong>
+                <p>The project uses Ollama for document embeddings and grounded answers.</p>
+              </div>
+            </div>
+
+            <div class="panel-card card stack">
+              <div class="section-title">Insert Document</div>
+              <label>
+                Title
+                <input type="text" id="docTitle" placeholder="Operating systems notes">
+              </label>
+              <label>
+                Text
+                <textarea id="docText" placeholder="Paste notes, article excerpts, or documentation. The app chunks longer text and embeds each chunk locally through Ollama."></textarea>
+              </label>
+              <button class="accent-btn" id="insertDocBtn" onclick="insertDocument()">Embed and insert</button>
+              <div class="status-note" id="insertStatus">Document chunks will appear as green points in the 3D field.</div>
+            </div>
+
+            <div class="panel-card card stack">
+              <div class="section-title">Stored Chunks (<span id="docCountLabel">0</span>)</div>
+              <div class="doc-list" id="docList">
+                <div class="empty-state">No documents yet. Add one above to populate the semantic field.</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="pane" id="pane-rag">
+          <div class="rag-pane-grid">
+            <div class="panel-card card stack">
+              <div class="section-title">Ask Grounded AI</div>
+              <label>
+                Question
+                <textarea id="ragQuestion" rows="3" placeholder="What is the main idea behind HNSW? Press Ctrl+Enter to submit."></textarea>
+              </label>
+              <div class="control-row">
+                <label style="flex:0 0 110px;">
+                  Top-K
+                  <select id="ragK">
+                    <option value="2">Top 2</option>
+                    <option value="3" selected>Top 3</option>
+                    <option value="5">Top 5</option>
+                  </select>
+                </label>
+                <button class="primary-btn" id="askBtn" onclick="askAI()">Ask AI</button>
+              </div>
+              <div class="status-note">Answers are grounded to retrieved document chunks. If nothing relevant is found, the assistant says so instead of pretending.</div>
+            </div>
+
+            <div class="panel-card card stack">
+              <div class="section-title">Conversation</div>
+              <div class="chat-history" id="chatHistory">
+                <div class="empty-state" id="chatEmpty">Ask a question about the documents you inserted and the answer will appear here.</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<div id="hoverCard">
+  <div class="hover-kind" id="hoverKind">Vector</div>
+  <div class="hover-title" id="hoverTitle">Hover a point to inspect it.</div>
+</div>
+
+<script>
+const API = window.location.origin.startsWith("http") ? window.location.origin : "http://127.0.0.1:8080";
+const DOC_PREFIX = "doc-";
+const DIMS = 16;
+const COL = {
+  cs: "#49d6ff",
+  math: "#ff7aa2",
+  food: "#ffbf5a",
+  sports: "#73f0aa",
+  doc: "#b7ff8a",
+  default: "#8ea9c6"
+};
+const CATEGORY_LABEL = {
+  cs: "CS / Algorithms",
+  math: "Mathematics",
+  food: "Food / Cooking",
+  sports: "Sports / Games",
+  doc: "Document chunk"
+};
+const DIM_COL = [
+  "#49d6ff", "#49d6ff", "#49d6ff", "#49d6ff",
+  "#ff7aa2", "#ff7aa2", "#ff7aa2", "#ff7aa2",
+  "#ffbf5a", "#ffbf5a", "#ffbf5a", "#ffbf5a",
+  "#73f0aa", "#73f0aa", "#73f0aa", "#73f0aa"
+];
+const KW = {
+  cs: ["algorithm", "data", "tree", "graph", "array", "linked", "hash", "stack", "queue", "sort", "binary", "dynamic", "programming", "recursion", "complexity", "pointer", "node", "search", "insert", "bfs", "dfs", "heap", "trie"],
+  math: ["calculus", "matrix", "probability", "theorem", "integral", "derivative", "linear", "algebra", "equation", "function", "prime", "modular", "combinatorics", "permutation", "eigenvalue", "statistics", "proof"],
+  food: ["food", "pizza", "sushi", "ramen", "pasta", "recipe", "cook", "eat", "restaurant", "dish", "ingredient", "flavor", "spice", "noodle", "bread", "croissant", "taco", "fish", "rice", "soup"],
+  sports: ["sport", "basketball", "football", "tennis", "chess", "swim", "game", "play", "score", "team", "athlete", "competition", "match", "tournament", "olympic", "dribble", "tackle", "serve"]
+};
+
+let demoItems = [];
+let docItems = [];
+let allItems = [];
+let scenePoints = [];
+let projectedPoints = [];
+let hoverItem = null;
+let hoverProjection = null;
+let hitIds = new Set();
+let queryPoint = null;
+let searchResults = [];
+let selAlgo = "hnsw";
+let sceneExtent = 1;
+let rotationX = -0.42;
+let rotationY = 0.84;
+let zoom = 1.15;
+let dragging = false;
+let lastPointer = null;
+let autoSpin = true;
+
+const sc = document.getElementById("scatter");
+const ctx = sc.getContext("2d");
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function switchTab(name, button) {
+  document.querySelectorAll(".tab-btn").forEach((btn) => btn.classList.toggle("active", btn === button));
+  document.querySelectorAll(".pane").forEach((pane) => pane.classList.toggle("active", pane.id === `pane-${name}`));
+  if (name === "docs") loadDocList();
+}
+
+function setAlgo(button) {
+  document.querySelectorAll(".algo-pill").forEach((pill) => pill.classList.remove("active"));
+  button.classList.add("active");
+  selAlgo = button.dataset.algo;
+  document.getElementById("heroAlgo").textContent = button.textContent;
+  document.getElementById("queryMeta").textContent = `The active search strategy is ${button.textContent}.`;
+}
+
+function textToEmbedding(text) {
+  const lower = text.toLowerCase();
+  const words = lower.split(/\s+/);
+  const score = { cs: 0, math: 0, food: 0, sports: 0 };
+  for (const word of words) {
+    for (const [category, keywords] of Object.entries(KW)) {
+      for (const keyword of keywords) {
+        if (word.includes(keyword) || keyword.startsWith(word)) {
+          score[category] += 0.35;
+          break;
+        }
+      }
+    }
+  }
+  const peak = Math.max(...Object.values(score), 0.01);
+  const emb = new Array(DIMS).fill(0.08);
+  const normalized = (value) => Math.min((value / peak) * 0.88, 0.94);
+  const jitter = () => (Math.random() - 0.5) * 0.04;
+  const fill = (index, value) => {
+    if (value < 0.01) return;
+    const base = normalized(value);
+    emb[index] = Math.max(0.05, base + jitter());
+    emb[index + 1] = Math.max(0.05, base + jitter());
+    emb[index + 2] = Math.max(0.05, base * 0.92 + jitter());
+    emb[index + 3] = Math.max(0.05, base * 0.87 + jitter());
+  };
+  fill(0, score.cs);
+  fill(4, score.math);
+  fill(8, score.food);
+  fill(12, score.sports);
+  return emb;
+}
+
+function toDocVisualItem(doc) {
+  return {
+    id: `${DOC_PREFIX}${doc.id}`,
+    sourceDocId: doc.id,
+    metadata: doc.title,
+    category: "doc",
+    embedding: textToEmbedding(`${doc.title} ${doc.preview || ""}`),
+    preview: doc.preview || "",
+    words: doc.words || 0
+  };
+}
+
+async function fetchStoredDocs() {
+  const res = await fetch(`${API}/doc/list`);
+  if (!res.ok) throw new Error("Could not load document list.");
+  return await res.json();
+}
+
+function dot(a, b) {
+  let sum = 0;
+  for (let i = 0; i < a.length; i++) sum += a[i] * b[i];
+  return sum;
+}
+
+function normalize(vec) {
+  const mag = Math.sqrt(dot(vec, vec));
+  if (mag < 1e-10) return vec.map(() => 0);
+  return vec.map((value) => value / mag);
+}
+
+function orthogonalize(vec, basis) {
+  let out = vec.slice();
+  for (const axis of basis) {
+    const factor = dot(out, axis);
+    out = out.map((value, idx) => value - factor * axis[idx]);
+  }
+  return out;
+}
+
+function powerIter(centered, basis) {
+  const dims = centered[0].length;
+  let vector = normalize(new Array(dims).fill(0).map(() => Math.random() - 0.5));
+  vector = normalize(orthogonalize(vector, basis));
+  if (dot(vector, vector) < 1e-10) {
+    vector = new Array(dims).fill(0);
+    if (dims > 0) vector[0] = 1;
+  }
+
+  for (let iter = 0; iter < 220; iter++) {
+    const next = new Array(dims).fill(0);
+    for (const row of centered) {
+      const projection = dot(row, vector);
+      for (let i = 0; i < dims; i++) next[i] += row[i] * projection;
+    }
+    const ortho = orthogonalize(next, basis);
+    const normalized = normalize(ortho);
+    const drift = normalized.reduce((sum, value, idx) => sum + Math.abs(value - vector[idx]), 0);
+    vector = normalized;
+    if (drift < 1e-8) break;
+  }
+  return vector;
+}
+
+function pca3D(embeddings) {
+  const n = embeddings.length;
+  if (n === 0) return [];
+  if (n === 1) return [[0, 0, 0]];
+
+  const dims = embeddings[0].length;
+  const mean = new Array(dims).fill(0);
+  for (const emb of embeddings) {
+    for (let i = 0; i < dims; i++) mean[i] += emb[i] / n;
+  }
+  const centered = embeddings.map((emb) => emb.map((value, idx) => value - mean[idx]));
+  const pc1 = powerIter(centered, []);
+  const pc2 = powerIter(centered, [pc1]);
+  const pc3 = powerIter(centered, [pc1, pc2]);
+  return centered.map((row) => [dot(row, pc1), dot(row, pc2), dot(row, pc3)]);
+}
+
+function rebuildProjection() {
+  allItems = [...demoItems, ...docItems];
+  if (!allItems.length) {
+    scenePoints = [];
+    sceneExtent = 1;
+    updateTopStats();
+    updateSceneCopy();
+    return;
+  }
+
+  const coords = pca3D(allItems.map((item) => item.embedding));
+  scenePoints = allItems.map((item, idx) => ({
+    x: coords[idx][0],
+    y: coords[idx][1],
+    z: coords[idx][2],
+    item
+  }));
+  sceneExtent = Math.max(
+    1,
+    ...scenePoints.map((point) => Math.max(Math.abs(point.x), Math.abs(point.y), Math.abs(point.z)))
+  );
+  updateTopStats();
+  updateSceneCopy();
+}
+
+function updateTopStats() {
+  const label = `${demoItems.length} demo vectors - ${docItems.length} doc projections - ${DIMS} dims`;
+  document.getElementById("statsLabel").textContent = label;
+  document.getElementById("sceneCount").textContent = String(allItems.length);
+  document.getElementById("highlightCount").textContent = String(hitIds.size);
+}
+
+function updateSceneCopy() {
+  const title = document.getElementById("sceneTitle");
+  const body = document.getElementById("sceneBody");
+  const tag = document.getElementById("sceneTag");
+
+  if (hoverItem) {
+    title.textContent = hoverItem.metadata;
+    body.textContent = `${CATEGORY_LABEL[hoverItem.category] || hoverItem.category} point. Hover highlights let you inspect exact semantic labels without leaving the 3D view.`;
+    tag.textContent = hoverItem.category === "doc" ? "Document projection" : "Semantic point";
+    return;
+  }
+
+  if (queryPoint && hitIds.size) {
+    title.textContent = "Active query neighborhood";
+    body.textContent = `${hitIds.size} nearby points are highlighted around the latest query anchor. Search results on the right stay in sync with the 3D view.`;
+    tag.textContent = "Query in focus";
+    return;
+  }
+
+  title.textContent = "Semantic landscape";
+  body.textContent = "Drag to orbit. Scroll to zoom. Demo vectors, documents, and active query neighborhoods all live in the same coordinate space.";
+  tag.textContent = "Live retrieval scene";
+}
+
+function resetView() {
+  rotationX = -0.42;
+  rotationY = 0.84;
+  zoom = 1.15;
+  document.getElementById("cameraState").textContent = `${zoom.toFixed(2)}x`;
+}
+
+function toggleSpin() {
+  autoSpin = !autoSpin;
+  document.getElementById("spinBtn").textContent = autoSpin ? "Pause spin" : "Resume spin";
+}
+
+function resizeCanvas() {
+  const rect = sc.parentElement.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  sc.width = Math.max(1, Math.floor(rect.width * dpr));
+  sc.height = Math.max(1, Math.floor(rect.height * dpr));
+  sc.style.width = `${rect.width}px`;
+  sc.style.height = `${rect.height}px`;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function rotatePoint(point) {
+  const ny = point.y / sceneExtent;
+  const nx = point.x / sceneExtent;
+  const nz = point.z / sceneExtent;
+  const cosY = Math.cos(rotationY);
+  const sinY = Math.sin(rotationY);
+  const cosX = Math.cos(rotationX);
+  const sinX = Math.sin(rotationX);
+
+  let rx = nx * cosY - nz * sinY;
+  let rz = nx * sinY + nz * cosY;
+  let ry = ny * cosX - rz * sinX;
+  rz = ny * sinX + rz * cosX;
+  return { x: rx, y: ry, z: rz };
+}
+
+function projectPoint(point, width, height) {
+  const rotated = rotatePoint(point);
+  const camera = 3.3 / zoom;
+  const perspective = camera / (camera - rotated.z);
+  const radius = Math.min(width, height) * 0.31;
+  return {
+    x: width * 0.5 + rotated.x * radius * perspective,
+    y: height * 0.54 + rotated.y * radius * perspective * 0.86,
+    z: rotated.z,
+    size: Math.max(3.5, 7 * perspective),
+    alpha: Math.min(1, Math.max(0.22, 0.28 + (rotated.z + 1.2) * 0.36)),
+    perspective,
+    item: point.item,
+    world: point
+  };
+}
+
+function projectWorldPoint(world, width, height) {
+  return projectPoint(world, width, height);
+}
+
+function drawWirePoint(point, width, height) {
+  const projected = projectWorldPoint(point, width, height);
+  return projected;
+}
+
+function drawSceneGrid(width, height) {
+  ctx.save();
+  ctx.lineWidth = 1;
+  for (let y = -0.72; y <= 0.72; y += 0.24) {
+    ctx.beginPath();
+    let started = false;
+    for (let x = -1.1; x <= 1.1; x += 0.05) {
+      const p = drawWirePoint({ x, y, z: -1.05, item: {} }, width, height);
+      if (!started) {
+        ctx.moveTo(p.x, p.y);
+        started = true;
+      } else {
+        ctx.lineTo(p.x, p.y);
+      }
+    }
+    ctx.strokeStyle = "rgba(118, 151, 187, 0.08)";
+    ctx.stroke();
+  }
+
+  for (let x = -1.1; x <= 1.1; x += 0.22) {
+    ctx.beginPath();
+    let started = false;
+    for (let y = -0.72; y <= 0.72; y += 0.05) {
+      const p = drawWirePoint({ x, y, z: -1.05, item: {} }, width, height);
+      if (!started) {
+        ctx.moveTo(p.x, p.y);
+        started = true;
+      } else {
+        ctx.lineTo(p.x, p.y);
+      }
+    }
+    ctx.strokeStyle = "rgba(118, 151, 187, 0.06)";
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawAxes(width, height) {
+  const origin = drawWirePoint({ x: 0, y: 0, z: 0, item: {} }, width, height);
+  const axisX = drawWirePoint({ x: 1.1, y: 0, z: 0, item: {} }, width, height);
+  const axisY = drawWirePoint({ x: 0, y: 1.1, z: 0, item: {} }, width, height);
+  const axisZ = drawWirePoint({ x: 0, y: 0, z: 1.1, item: {} }, width, height);
+
+  ctx.save();
+  ctx.lineWidth = 1.4;
+
+  ctx.strokeStyle = "rgba(73, 214, 255, 0.45)";
+  ctx.beginPath();
+  ctx.moveTo(origin.x, origin.y);
+  ctx.lineTo(axisX.x, axisX.y);
+  ctx.stroke();
+
+  ctx.strokeStyle = "rgba(255, 122, 162, 0.38)";
+  ctx.beginPath();
+  ctx.moveTo(origin.x, origin.y);
+  ctx.lineTo(axisY.x, axisY.y);
+  ctx.stroke();
+
+  ctx.strokeStyle = "rgba(255, 191, 90, 0.34)";
+  ctx.beginPath();
+  ctx.moveTo(origin.x, origin.y);
+  ctx.lineTo(axisZ.x, axisZ.y);
+  ctx.stroke();
+
+  ctx.fillStyle = "rgba(212, 231, 255, 0.72)";
+  ctx.font = '11px "IBM Plex Mono", monospace';
+  ctx.fillText("PC1", axisX.x + 8, axisX.y);
+  ctx.fillText("PC2", axisY.x + 8, axisY.y);
+  ctx.fillText("PC3", axisZ.x + 8, axisZ.y);
+  ctx.restore();
+}
+
+function drawQueryConnections(width, height) {
+  if (!queryPoint || !hitIds.size) return;
+  const queryProjection = projectWorldPoint(queryPoint, width, height);
+  for (const point of scenePoints) {
+    if (!hitIds.has(point.item.id)) continue;
+    const target = projectWorldPoint(point, width, height);
+    ctx.save();
+    ctx.strokeStyle = "rgba(73, 214, 255, 0.16)";
+    ctx.lineWidth = 1;
+    ctx.setLineDash([5, 8]);
+    ctx.beginPath();
+    ctx.moveTo(queryProjection.x, queryProjection.y);
+    ctx.lineTo(target.x, target.y);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function drawQueryAnchor(width, height) {
+  if (!queryPoint) return;
+  const point = projectWorldPoint(queryPoint, width, height);
+  ctx.save();
+  ctx.translate(point.x, point.y);
+  ctx.shadowColor = "rgba(255, 255, 255, 0.8)";
+  ctx.shadowBlur = 24;
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const angle = (i * Math.PI) / 5 - Math.PI / 2;
+    const radius = i % 2 === 0 ? 12 : 5.5;
+    const x = Math.cos(angle) * radius;
+    const y = Math.sin(angle) * radius;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawPoints(width, height) {
+  projectedPoints = scenePoints.map((point) => projectPoint(point, width, height));
+  projectedPoints.sort((a, b) => a.z - b.z);
+
+  for (const projected of projectedPoints) {
+    const category = projected.item.category;
+    const color = COL[category] || COL.default;
+    const hit = hitIds.has(projected.item.id);
+    const hovered = hoverItem && hoverItem.id === projected.item.id;
+    const size = projected.size + (hit ? 2.2 : 0) + (hovered ? 1.5 : 0);
+
+    const glow = ctx.createRadialGradient(projected.x, projected.y, 0, projected.x, projected.y, size * 4);
+    glow.addColorStop(0, `${color}dd`);
+    glow.addColorStop(0.55, `${color}55`);
+    glow.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(projected.x, projected.y, size * 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.save();
+    ctx.globalAlpha = projected.alpha;
+    ctx.beginPath();
+    ctx.arc(projected.x, projected.y, size, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.restore();
+
+    if (hit || hovered) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(projected.x, projected.y, size + 6 + Math.sin(Date.now() / 250) * 1.4, 0, Math.PI * 2);
+      ctx.strokeStyle = hit ? `${color}99` : `${color}77`;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+}
+
+function drawFrame() {
+  const width = sc.clientWidth;
+  const height = sc.clientHeight;
+  ctx.clearRect(0, 0, width, height);
+
+  const background = ctx.createLinearGradient(0, 0, 0, height);
+  background.addColorStop(0, "rgba(7, 13, 22, 0.94)");
+  background.addColorStop(1, "rgba(4, 9, 15, 1)");
+  ctx.fillStyle = background;
+  ctx.fillRect(0, 0, width, height);
+
+  const halo = ctx.createRadialGradient(width * 0.25, height * 0.18, 0, width * 0.25, height * 0.18, width * 0.42);
+  halo.addColorStop(0, "rgba(73, 214, 255, 0.09)");
+  halo.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = halo;
+  ctx.fillRect(0, 0, width, height);
+
+  drawSceneGrid(width, height);
+  drawAxes(width, height);
+  drawQueryConnections(width, height);
+  drawPoints(width, height);
+  drawQueryAnchor(width, height);
+
+  document.getElementById("cameraState").textContent = `${zoom.toFixed(2)}x`;
+  document.getElementById("highlightCount").textContent = String(hitIds.size);
+  document.getElementById("sceneCount").textContent = String(allItems.length);
+
+  if (autoSpin && !dragging) rotationY += 0.0022;
+  requestAnimationFrame(drawFrame);
+}
+
+function showHoverCard(x, y, item) {
+  const card = document.getElementById("hoverCard");
+  document.getElementById("hoverKind").textContent = CATEGORY_LABEL[item.category] || item.category;
+  document.getElementById("hoverTitle").textContent = item.metadata;
+  card.style.display = "block";
+  card.style.left = `${x + 16}px`;
+  card.style.top = `${y + 16}px`;
+}
+
+function hideHoverCard() {
+  document.getElementById("hoverCard").style.display = "none";
+}
+
+function updateHoverState(clientX, clientY) {
+  const rect = sc.getBoundingClientRect();
+  const x = clientX - rect.left;
+  const y = clientY - rect.top;
+  let best = null;
+  let distance = 24;
+  for (const point of projectedPoints) {
+    const d = Math.hypot(point.x - x, point.y - y);
+    if (d < distance) {
+      distance = d;
+      best = point;
+    }
+  }
+
+  if (best) {
+    hoverItem = best.item;
+    hoverProjection = best;
+    showHoverCard(clientX, clientY, best.item);
+  } else {
+    hoverItem = null;
+    hoverProjection = null;
+    hideHoverCard();
+  }
+  updateSceneCopy();
+}
+
+sc.addEventListener("mousedown", (event) => {
+  dragging = true;
+  lastPointer = { x: event.clientX, y: event.clientY };
+});
+
+window.addEventListener("mouseup", () => {
+  dragging = false;
+  lastPointer = null;
+});
+
+window.addEventListener("mousemove", (event) => {
+  if (dragging && lastPointer) {
+    const dx = event.clientX - lastPointer.x;
+    const dy = event.clientY - lastPointer.y;
+    rotationY += dx * 0.0085;
+    rotationX += dy * 0.006;
+    rotationX = Math.max(-1.2, Math.min(1.2, rotationX));
+    lastPointer = { x: event.clientX, y: event.clientY };
+    hideHoverCard();
+    hoverItem = null;
+    updateSceneCopy();
+    return;
+  }
+
+  if (event.target === sc) updateHoverState(event.clientX, event.clientY);
+});
+
+sc.addEventListener("mouseleave", () => {
+  if (!dragging) {
+    hoverItem = null;
+    hoverProjection = null;
+    hideHoverCard();
+    updateSceneCopy();
+  }
+});
+
+sc.addEventListener("wheel", (event) => {
+  event.preventDefault();
+  zoom += event.deltaY > 0 ? -0.08 : 0.08;
+  zoom = Math.max(0.72, Math.min(1.9, zoom));
+}, { passive: false });
+
+function renderEmbeddingProfile(embedding) {
+  const profile = document.getElementById("embeddingProfile");
+  profile.innerHTML = embedding.map((value, idx) => {
+    const color = DIM_COL[idx];
+    const height = Math.max(6, Math.round(value * 92));
+    return `
+      <div class="profile-bar">
+        <div class="rail">
+          <div class="fill" style="height:${height}px;background:${color};color:${color};"></div>
+        </div>
+        <span>${idx + 1}</span>
+      </div>`;
+  }).join("");
+}
+
+function renderSearchResults(results) {
+  const target = document.getElementById("results");
+  if (!results.length) {
+    target.innerHTML = '<div class="empty-state">No search results yet. Try a concept like "sushi" or "dynamic programming".</div>';
+    return;
+  }
+
+  target.innerHTML = results.map((result, idx) => {
+    const color = COL[result.category] || COL.default;
+    return `
+      <div class="result-card">
+        <div class="result-rank">Nearest #${idx + 1}</div>
+        <div class="result-title">${escapeHtml(result.metadata)}</div>
+        <div class="result-foot">
+          <span class="badge-soft" style="border-color:${color}44;color:${color};background:${color}14;">${escapeHtml((CATEGORY_LABEL[result.category] || result.category).toUpperCase())}</span>
+          <span class="distance">dist ${Number(result.distance).toFixed(5)}</span>
+          <button class="delete-btn" onclick="deleteItem(${result.id})">Delete</button>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+function renderBenchmarks(data) {
+  const bars = document.getElementById("benchBars");
+  const rows = [
+    { label: "Brute force", value: data.bruteforceUs, color: "#ff7aa2" },
+    { label: "KD-tree", value: data.kdtreeUs, color: "#49d6ff" },
+    { label: "HNSW", value: data.hnswUs, color: "#73f0aa" }
+  ];
+  const peak = Math.max(1, ...rows.map((row) => row.value));
+  bars.innerHTML = rows.map((row) => {
+    const width = Math.max(6, Math.round((row.value / peak) * 100));
+    const display = row.value < 1000 ? `${row.value} us` : `${(row.value / 1000).toFixed(2)} ms`;
+    return `
+      <div class="benchmark-row">
+        <div class="benchmark-head">
+          <strong>${row.label}</strong>
+          <span>${display}</span>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${width}%;background:${row.color};"></div>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+function renderHnswLayers(data) {
+  const container = document.getElementById("layers");
+  const peak = Math.max(1, ...(data.nodesPerLayer || [1]));
+  container.innerHTML = data.nodesPerLayer.map((count, idx) => {
+    const edges = data.edgesPerLayer[idx] || 0;
+    const width = Math.max(6, Math.round((count / peak) * 100));
+    return `
+      <div class="layer-row">
+        <div class="layer-head">
+          <strong>Layer L${idx}</strong>
+          <span>${count} nodes - ${edges} edges</span>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${width}%;background:linear-gradient(90deg, #49d6ff, #73f0aa);"></div>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+async function loadItems() {
+  try {
+    const [itemsRes, docs] = await Promise.all([
+      fetch(`${API}/items`),
+      fetchStoredDocs().catch(() => [])
+    ]);
+    demoItems = await itemsRes.json();
+    docItems = docs.map(toDocVisualItem);
+    rebuildProjection();
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+async function loadHNSW() {
+  try {
+    const res = await fetch(`${API}/hnsw-info`);
+    const data = await res.json();
+    renderHnswLayers(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+async function runSearch() {
+  const text = document.getElementById("qInput").value.trim();
+  if (!text) return;
+
+  const embedding = textToEmbedding(text);
+  renderEmbeddingProfile(embedding);
+
+  const k = parseInt(document.getElementById("kSlider").value, 10);
+  const metric = document.getElementById("metric").value;
+
+  try {
+    const res = await fetch(`${API}/search?v=${embedding.join(",")}&k=${k}&metric=${metric}&algo=${selAlgo}`);
+    const data = await res.json();
+    searchResults = data.results || [];
+    hitIds = new Set(searchResults.map((item) => item.id));
+
+    const latency = data.latencyUs || 0;
+    document.getElementById("latBig").textContent = latency < 1000 ? `${latency} us` : `${(latency / 1000).toFixed(2)} ms`;
+    document.getElementById("latSub").textContent = `${selAlgo.toUpperCase()} - ${metric} - top ${k}`;
+    document.getElementById("queryMode").textContent = text;
+    document.getElementById("queryMeta").textContent = `${searchResults.length} demo neighbors highlighted in the 3D field.`;
+
+    if (searchResults.length) {
+      let sx = 0;
+      let sy = 0;
+      let sz = 0;
+      let sw = 0;
+      for (let idx = 0; idx < Math.min(4, searchResults.length); idx++) {
+        const point = scenePoints.find((entry) => entry.item.id === searchResults[idx].id);
+        if (!point) continue;
+        const weight = 1 / (idx + 1);
+        sx += point.x * weight;
+        sy += point.y * weight;
+        sz += point.z * weight;
+        sw += weight;
+      }
+      queryPoint = sw ? { x: sx / sw, y: sy / sw, z: sz / sw, item: { id: "query" } } : null;
+    } else {
+      queryPoint = null;
+    }
+
+    renderSearchResults(searchResults);
+    updateSceneCopy();
+    updateTopStats();
+  } catch (error) {
+    console.error(error);
+    alert("Could not reach the local server. Make sure db.exe is running on port 8080.");
+  }
+}
+
+async function runBenchmark() {
+  const text = document.getElementById("qInput").value.trim() || "binary tree algorithm";
+  const embedding = textToEmbedding(text);
+  const metric = document.getElementById("metric").value;
+  try {
+    const res = await fetch(`${API}/benchmark?v=${embedding.join(",")}&k=5&metric=${metric}`);
+    const data = await res.json();
+    renderBenchmarks(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+async function addVector() {
+  const meta = document.getElementById("addMeta").value.trim();
+  const category = document.getElementById("addCat").value;
+  if (!meta) return;
+  const embedding = textToEmbedding(`${meta} ${category}`);
+  try {
+    await fetch(`${API}/insert`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ metadata: meta, category, embedding })
+    });
+    document.getElementById("addMeta").value = "";
+    await loadItems();
+    await loadHNSW();
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+async function deleteItem(id) {
+  try {
+    await fetch(`${API}/delete/${id}`, { method: "DELETE" });
+    searchResults = searchResults.filter((item) => item.id !== id);
+    hitIds.delete(id);
+    renderSearchResults(searchResults);
+    await loadItems();
+    await loadHNSW();
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+async function checkOllamaStatus() {
+  try {
+    const res = await fetch(`${API}/status`);
+    const data = await res.json();
+    const badge = document.getElementById("ollamaBadge");
+    const panel = document.getElementById("ollamaStatus");
+    document.getElementById("heroGrounding").textContent = data.ollamaAvailable ? "Online" : "Offline";
+
+    if (data.ollamaAvailable) {
+      badge.textContent = "Ollama online";
+      badge.className = "pill ok";
+      panel.innerHTML = `
+        <strong>Local models are available.</strong>
+        <p>Embedding model: <code>${escapeHtml(data.embedModel)}</code></p>
+        <p>Generation model: <code>${escapeHtml(data.genModel)}</code></p>
+        <p>Document chunks: <code>${data.docCount}</code> - inferred dimensions: <code>${data.docDims || "pending first insert"}</code></p>`;
+    } else {
+      badge.textContent = "Ollama offline";
+      badge.className = "pill err";
+      panel.innerHTML = `
+        <strong>Ollama is not reachable.</strong>
+        <p>Install Ollama, run <code>ollama pull nomic-embed-text</code>, <code>ollama pull llama3.2</code>, then start <code>ollama serve</code>.</p>`;
+    }
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+async function loadDocList() {
+  try {
+    const docs = await fetchStoredDocs();
+    const list = document.getElementById("docList");
+    document.getElementById("docCountLabel").textContent = docs.length;
+    if (!docs.length) {
+      list.innerHTML = '<div class="empty-state">No documents yet. Add one above to populate the semantic field.</div>';
+      return;
+    }
+    list.innerHTML = docs.map((doc) => `
+      <div class="doc-card">
+        <div class="doc-meta">${doc.words} words</div>
+        <div class="doc-title">${escapeHtml(doc.title)}</div>
+        <div class="doc-preview">${escapeHtml(doc.preview)}</div>
+        <div class="doc-foot">
+          <span class="badge-soft">Projected in 3D field</span>
+          <button class="delete-btn" onclick="deleteDoc(${doc.id})">Delete</button>
+        </div>
+      </div>`).join("");
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+async function insertDocument() {
+  const title = document.getElementById("docTitle").value.trim();
+  const text = document.getElementById("docText").value.trim();
+  const button = document.getElementById("insertDocBtn");
+  const status = document.getElementById("insertStatus");
+  if (!title || !text) {
+    status.textContent = "Please add both a title and some text.";
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "Embedding...";
+  status.textContent = "Calling Ollama to embed document chunks...";
+
+  try {
+    const res = await fetch(`${API}/doc/insert`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, text })
+    });
+    const data = await res.json();
+    if (data.error) {
+      status.textContent = data.error;
+    } else {
+      status.textContent = `Inserted ${data.chunks} chunk(s) with ${data.dims} dimensions.`;
+      document.getElementById("docTitle").value = "";
+      document.getElementById("docText").value = "";
+      await loadItems();
+      await loadDocList();
+      await checkOllamaStatus();
+    }
+  } catch (error) {
+    status.textContent = "Could not insert the document. Check the local server and Ollama.";
+    console.error(error);
+  }
+
+  button.disabled = false;
+  button.textContent = "Embed and insert";
+}
+
+async function deleteDoc(id) {
+  try {
+    await fetch(`${API}/doc/delete/${id}`, { method: "DELETE" });
+    await loadItems();
+    await loadDocList();
+    await checkOllamaStatus();
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+function removeChatEmpty() {
+  const empty = document.getElementById("chatEmpty");
+  if (empty) empty.remove();
+}
+
+function appendThinking(history) {
+  const node = document.createElement("div");
+  node.className = "thinking";
+  node.innerHTML = '<div class="spinner"></div><span>Retrieving context and generating an answer...</span>';
+  history.appendChild(node);
+  history.scrollTop = history.scrollHeight;
+  return node;
+}
+
+async function updateRagHighlights(question, k) {
+  try {
+    const res = await fetch(`${API}/doc/search`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question, k })
+    });
+    const data = await res.json();
+    if (data.contexts && data.contexts.length) {
+      hitIds = new Set();
+      let sx = 0;
+      let sy = 0;
+      let sz = 0;
+      let sw = 0;
+      data.contexts.forEach((context, idx) => {
+        const point = scenePoints.find((entry) => entry.item.sourceDocId === context.id);
+        if (!point) return;
+        hitIds.add(point.item.id);
+        const weight = 1 / (idx + 1);
+        sx += point.x * weight;
+        sy += point.y * weight;
+        sz += point.z * weight;
+        sw += weight;
+      });
+      queryPoint = sw ? { x: sx / sw, y: sy / sw, z: sz / sw, item: { id: "query" } } : null;
+      updateTopStats();
+      updateSceneCopy();
+      return;
+    }
+  } catch (error) {
+    console.error(error);
+  }
+
+  hitIds = new Set();
+  updateTopStats();
+  updateSceneCopy();
+}
+
+function buildContextHtml(messageId, contexts) {
+  if (!contexts.length) return "";
+  return `
+    <div class="ctx-wrap">
+      <div class="ctx-label">Retrieved chunks (${contexts.length})</div>
+      <div class="ctx-chip-row">
+        ${contexts.map((context, idx) => {
+          const panelId = `${messageId}-ctx-${idx}`;
+          return `
+            <button class="ctx-chip" onclick="toggleCtx('${panelId}')">Chunk ${idx + 1} - ${Number(context.distance).toFixed(3)}</button>
+            <div class="ctx-panel" id="${panelId}">${escapeHtml(context.text)}</div>`;
+        }).join("")}
+      </div>
+    </div>`;
+}
+
+async function askAI() {
+  const question = document.getElementById("ragQuestion").value.trim();
+  if (!question) return;
+  const k = parseInt(document.getElementById("ragK").value, 10);
+  const button = document.getElementById("askBtn");
+  const history = document.getElementById("chatHistory");
+  removeChatEmpty();
+
+  button.disabled = true;
+  button.textContent = "Thinking...";
+
+  const q = document.createElement("div");
+  q.className = "chat-q";
+  q.textContent = question;
+  history.appendChild(q);
+
+  const thinking = appendThinking(history);
+  updateRagHighlights(question, k);
+
+  try {
+    const res = await fetch(`${API}/doc/ask`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question, k })
+    });
+    const data = await res.json();
+    thinking.remove();
+
+    const card = document.createElement("div");
+    card.className = "chat-card";
+
+    if (data.error) {
+      card.innerHTML = `
+        <div class="chat-meta">Error</div>
+        <div class="chat-answer">${escapeHtml(data.error)}</div>`;
+    } else {
+      const messageId = `msg-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+      const metaLabel = data.grounded === false ? "No doc match" : `Grounded answer - ${escapeHtml(data.model || "local model")}`;
+      card.innerHTML = `
+        <div class="chat-meta">${metaLabel}</div>
+        <div class="chat-answer">${escapeHtml(data.answer)}</div>
+        ${buildContextHtml(messageId, data.contexts || [])}`;
+    }
+
+    history.appendChild(card);
+  } catch (error) {
+    thinking.remove();
+    const card = document.createElement("div");
+    card.className = "chat-card";
+    card.innerHTML = `
+      <div class="chat-meta">Error</div>
+      <div class="chat-answer">Could not reach the local RAG endpoint. Make sure the backend is running.</div>`;
+    history.appendChild(card);
+    console.error(error);
+  }
+
+  document.getElementById("ragQuestion").value = "";
+  button.disabled = false;
+  button.textContent = "Ask AI";
+  history.scrollTop = history.scrollHeight;
+}
+
+function toggleCtx(id) {
+  const panel = document.getElementById(id);
+  if (!panel) return;
+  panel.style.display = panel.style.display === "block" ? "none" : "block";
+}
+
+document.getElementById("qInput").addEventListener("keydown", (event) => {
+  if (event.key === "Enter") runSearch();
+});
+
+document.getElementById("ragQuestion").addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && event.ctrlKey) askAI();
+});
+
+document.getElementById("kSlider").addEventListener("input", (event) => {
+  document.getElementById("kLabel").textContent = event.target.value;
+});
+
+window.addEventListener("resize", resizeCanvas);
+
+resizeCanvas();
+renderEmbeddingProfile(new Array(DIMS).fill(0.08));
+drawFrame();
+loadItems().then(loadHNSW);
+loadDocList();
+checkOllamaStatus();
+</script>
+</body>
+</html>
