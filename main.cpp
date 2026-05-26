@@ -634,10 +634,21 @@ public:
     std::vector<float> embed(const std::string& text) {
         httplib::Client cli(host, port);
         cli.set_connection_timeout(3, 0);
-        cli.set_read_timeout(30, 0);
+        cli.set_read_timeout(120, 0);
         std::string body = "{\"model\":\"" + embedModel + "\",\"prompt\":\"" + esc(text) + "\"}";
         auto res = cli.Post("/api/embeddings", body, "application/json");
-        if (!res || res->status != 200) return {};
+        if (!res) {
+            std::cerr << "Ollama embed failed: connection failed" << std::endl;
+            return {};
+        }
+        if (res->status == 404) {
+            std::cerr << "Ollama embed failed: model " << embedModel << " not found. Run: ollama pull " << embedModel << std::endl;
+            return {};
+        }
+        if (res->status != 200) {
+            std::cerr << "Ollama embed failed: status " << res->status << std::endl;
+            return {};
+        }
         return parseEmbedding(res->body);
     }
 
@@ -650,8 +661,12 @@ public:
                            "\"prompt\":\"" + esc(prompt) + "\","
                            "\"stream\":false}";
         auto res = cli.Post("/api/generate", body, "application/json");
-        if (!res || res->status != 200)
+        if (!res)
             return "ERROR: Ollama unavailable. Run: ollama serve";
+        if (res->status == 404)
+            return "ERROR: Model '" + genModel + "' not found. Run: ollama pull " + genModel;
+        if (res->status != 200)
+            return "ERROR: Ollama returned status " + std::to_string(res->status);
         return parseResponse(res->body);
     }
 };
@@ -1120,15 +1135,8 @@ int main() {
         res.set_content(ss.str(), "application/json");
     });
 
-    // Serve index.html
-    svr.Get("/", [](const httplib::Request&, httplib::Response& res) {
-        std::ifstream f("index.html");
-        if (!f.is_open()) { res.status = 404; return; }
-        res.set_content(
-            std::string(std::istreambuf_iterator<char>(f),
-                        std::istreambuf_iterator<char>()),
-            "text/html");
-    });
+    // Serve static files from the "ui" directory
+    svr.set_mount_point("/", "./ui");
 
     svr.listen("127.0.0.1", 8080);
     return 0;

@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PragnaAI - Vector Retrieval Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app-shell">
+  <header class="topbar">
+    <div class="brand">
+      <div class="eyebrow">Vector Retrieval Studio</div>
+      <h1><span>PragnaAI</span></h1>
+      <p>Explore semantic neighborhoods in an interactive 3D field, compare HNSW against KD-Tree and brute force, embed your own documents, and ask grounded questions against a local LLM.</p>
+    </div>
+    <div class="header-meta">
+      <span class="pill glow">3D semantic field</span>
+      <span class="pill">HNSW</span>
+      <span class="pill">KD-tree</span>
+      <span class="pill">Brute force</span>
+      <span class="pill" id="ollamaBadge">Checking Ollama</span>
+      <span class="pill" id="statsLabel">20 demo vectors - 16 dims</span>
+    </div>
+  </header>
+
+  <main class="main-grid">
+    <aside class="rail">
+      <div class="rail-scroll">
+        <div class="section-block">
+          <div class="section-title">Query</div>
+          <div class="card stack">
+            <label>
+              Search the demo vector space
+              <input type="text" id="qInput" placeholder="binary tree, sushi, basketball">
+            </label>
+            <button class="primary-btn" onclick="runSearch()">Search</button>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-title">Algorithm</div>
+          <div class="algo-grid">
+            <button class="algo-pill active" data-algo="hnsw" onclick="setAlgo(this)">HNSW</button>
+            <button class="algo-pill" data-algo="kdtree" onclick="setAlgo(this)">KD-tree</button>
+            <button class="algo-pill" data-algo="bruteforce" onclick="setAlgo(this)">Brute</button>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-title">Distance Metric</div>
+          <div class="card stack">
+            <label>
+              Metric
+              <select id="metric">
+                <option value="cosine">Cosine similarity</option>
+                <option value="euclidean">Euclidean distance</option>
+                <option value="manhattan">Manhattan distance</option>
+              </select>
+            </label>
+            <div>
+              <div class="k-row">
+                <span>Top-K</span>
+                <strong id="kLabel">5</strong>
+              </div>
+              <input type="range" id="kSlider" min="1" max="10" value="5">
+            </div>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-title">Semantic Legend</div>
+          <div class="card">
+            <div class="legend-list">
+              <div class="legend-row"><span class="legend-dot" style="color:#49d6ff;background:#49d6ff"></span>CS / Algorithms</div>
+              <div class="legend-row"><span class="legend-dot" style="color:#ff7aa2;background:#ff7aa2"></span>Mathematics</div>
+              <div class="legend-row"><span class="legend-dot" style="color:#ffbf5a;background:#ffbf5a"></span>Food / Cooking</div>
+              <div class="legend-row"><span class="legend-dot" style="color:#73f0aa;background:#73f0aa"></span>Sports / Games</div>
+              <div class="legend-row"><span class="legend-dot" style="color:#b7ff8a;background:#b7ff8a"></span>Document projections</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-title">Insert Demo Vector</div>
+          <div class="card stack">
+            <label>
+              Description
+              <input type="text" id="addMeta" placeholder="Describe a new semantic point">
+            </label>
+            <label>
+              Category
+              <select id="addCat">
+                <option value="cs">CS / Algorithms</option>
+                <option value="math">Mathematics</option>
+                <option value="food">Food / Cooking</option>
+                <option value="sports">Sports / Games</option>
+              </select>
+            </label>
+            <button class="secondary-btn" onclick="addVector()">Insert point</button>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-title">Benchmark</div>
+          <div class="card stack">
+            <div class="status-note">Run the same query across all three search strategies and compare their latency.</div>
+            <button class="accent-btn" onclick="runBenchmark()">Compare all algorithms</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <section class="stage">
+      <div class="stage-card">
+        <div class="hero-grid">
+          <div class="hero-copy">
+            <div class="eyebrow">Interactive retrieval cockpit</div>
+            <h2>Orbit the semantic space instead of staring at a flat scatter plot.</h2>
+            <p>The center visualization now renders a 3D projection of the vector field. Drag to rotate, scroll to zoom, and watch document chunks land directly inside the same semantic world as your demo vectors.</p>
+          </div>
+          <div class="hero-metrics">
+            <div class="metric-card">
+              <div class="metric-label">Core search</div>
+              <div class="metric-value" id="heroAlgo">HNSW</div>
+              <div class="metric-sub">Switch between HNSW, KD-tree, and brute force without leaving the scene.</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Grounded RAG</div>
+              <div class="metric-value" id="heroGrounding">Ready</div>
+              <div class="metric-sub">Answers stay tied to retrieved documents and report when no grounded match exists.</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Projection</div>
+              <div class="metric-value">3D</div>
+              <div class="metric-sub">Semantic points, query anchors, and live highlights all share one orbitable view.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="scene-card">
+        <div class="scene-topbar">
+          <div>
+            <div class="eyebrow">Center stage</div>
+            <h3>3D semantic field</h3>
+            <p id="sceneSubtitle">Hover a point to inspect it. Search results glow brighter and pull a query anchor into place.</p>
+          </div>
+          <div class="scene-actions">
+            <button class="ghost-btn" onclick="resetView()">Reset view</button>
+            <button class="ghost-btn" id="spinBtn" onclick="toggleSpin()">Pause spin</button>
+          </div>
+        </div>
+        <div class="scene-shell">
+          <canvas id="scatter"></canvas>
+          <div class="scene-overlay">
+            <div class="scene-badge-row">
+              <div class="scene-copy">
+                <div class="scene-tag" id="sceneTag">Live retrieval scene</div>
+                <h4 id="sceneTitle">Semantic landscape</h4>
+                <p id="sceneBody">Drag to orbit. Scroll to zoom. Demo vectors, documents, and active query neighborhoods all live in the same coordinate space.</p>
+              </div>
+              <div class="scene-stats">
+                <div class="scene-stat">
+                  <div class="label">Visible points</div>
+                  <div class="value" id="sceneCount">20</div>
+                </div>
+                <div class="scene-stat">
+                  <div class="label">Camera</div>
+                  <div class="value" id="cameraState">1.15x</div>
+                </div>
+                <div class="scene-stat">
+                  <div class="label">Highlighted</div>
+                  <div class="value" id="highlightCount">0</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="scene-foot">
+              <div class="hint-list">
+                <span class="hint-chip">drag to orbit</span>
+                <span class="hint-chip">scroll to zoom</span>
+                <span class="hint-chip">green points are document projections</span>
+              </div>
+              <div class="legend-inline">
+                <span class="legend-chip"><span class="legend-dot" style="color:#49d6ff;background:#49d6ff"></span>CS</span>
+                <span class="legend-chip"><span class="legend-dot" style="color:#ff7aa2;background:#ff7aa2"></span>Math</span>
+                <span class="legend-chip"><span class="legend-dot" style="color:#ffbf5a;background:#ffbf5a"></span>Food</span>
+                <span class="legend-chip"><span class="legend-dot" style="color:#73f0aa;background:#73f0aa"></span>Sports</span>
+                <span class="legend-chip"><span class="legend-dot" style="color:#b7ff8a;background:#b7ff8a"></span>Docs</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="right-panel">
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="search" onclick="switchTab('search', this)">Search</button>
+        <button class="tab-btn" data-tab="docs" onclick="switchTab('docs', this)">Documents</button>
+        <button class="tab-btn" data-tab="rag" onclick="switchTab('rag', this)">Ask AI</button>
+      </div>
+      <div class="right-scroll">
+        <section class="pane active" id="pane-search">
+          <div class="search-pane-grid">
+            <div class="stat-strip">
+              <div class="mini-stat">
+                <div class="label">Search latency</div>
+                <div class="value" id="latBig">--</div>
+                <div class="sub" id="latSub">Run a query to inspect the active algorithm.</div>
+              </div>
+              <div class="mini-stat">
+                <div class="label">Query profile</div>
+                <div class="value" id="queryMode">Ready</div>
+                <div class="sub" id="queryMeta">The next search will update the 3D anchor and result neighborhood.</div>
+              </div>
+            </div>
+
+            <div class="panel-card card stack">
+              <div class="section-title">Top Matches</div>
+              <div class="results-list" id="results">
+                <div class="empty-state">Run a search to see the nearest semantic neighbors.</div>
+              </div>
+            </div>
+
+            <div class="panel-card card stack">
+              <div class="section-title">Embedding Profile</div>
+              <div class="status-note">The search phrase is transformed into a quick 16D demo embedding so you can see which semantic bands are lighting up.</div>
+              <div class="profile-grid" id="embeddingProfile"></div>
+            </div>
+
+            <div class="panel-card card stack">
+              <div class="section-title">Algorithm Comparison</div>
+              <div class="benchmark-list" id="benchBars">
+                <div class="empty-state">Benchmark data appears here after you run Compare all algorithms.</div>
+              </div>
+            </div>
+
+            <div class="panel-card card stack">
+              <div class="section-title">HNSW Layers</div>
+              <div class="layers-list" id="layers">
+                <div class="empty-state">Loading graph structure...</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="pane" id="pane-docs">
+          <div class="docs-pane-grid">
+            <div class="panel-card card stack">
+              <div class="section-title">Ollama Status</div>
+              <div class="status-panel" id="ollamaStatus">
+                <strong>Checking local models...</strong>
+                <p>The project uses Ollama for document embeddings and grounded answers.</p>
+              </div>
+            </div>
+
+            <div class="panel-card card stack">
+              <div class="section-title">Insert Document</div>
+              <label>
+                Title
+                <input type="text" id="docTitle" placeholder="Operating systems notes">
+              </label>
+              <label>
+                Text
+                <textarea id="docText" placeholder="Paste notes, article excerpts, or documentation. The app chunks longer text and embeds each chunk locally through Ollama."></textarea>
+              </label>
+              <button class="accent-btn" id="insertDocBtn" onclick="insertDocument()">Embed and insert</button>
+              <div class="status-note" id="insertStatus">Document chunks will appear as green points in the 3D field.</div>
+            </div>
+
+            <div class="panel-card card stack">
+              <div class="section-title">Stored Chunks (<span id="docCountLabel">0</span>)</div>
+              <div class="doc-list" id="docList">
+                <div class="empty-state">No documents yet. Add one above to populate the semantic field.</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="pane" id="pane-rag">
+          <div class="rag-pane-grid">
+            <div class="panel-card card stack">
+              <div class="section-title">Ask Grounded AI</div>
+              <label>
+                Question
+                <textarea id="ragQuestion" rows="3" placeholder="What is the main idea behind HNSW? Press Ctrl+Enter to submit."></textarea>
+              </label>
+              <div class="control-row">
+                <label style="flex:0 0 110px;">
+                  Top-K
+                  <select id="ragK">
+                    <option value="2">Top 2</option>
+                    <option value="3" selected>Top 3</option>
+                    <option value="5">Top 5</option>
+                  </select>
+                </label>
+                <button class="primary-btn" id="askBtn" onclick="askAI()">Ask AI</button>
+              </div>
+              <div class="status-note">Answers are grounded to retrieved document chunks. If nothing relevant is found, the assistant says so instead of pretending.</div>
+            </div>
+
+            <div class="panel-card card stack">
+              <div class="section-title">Conversation</div>
+              <div class="chat-history" id="chatHistory">
+                <div class="empty-state" id="chatEmpty">Ask a question about the documents you inserted and the answer will appear here.</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<div id="hoverCard">
+  <div class="hover-kind" id="hoverKind">Vector</div>
+  <div class="hover-title" id="hoverTitle">Hover a point to inspect it.</div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
