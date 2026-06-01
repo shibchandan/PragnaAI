@@ -8,6 +8,15 @@ a.out
 build/
 bin/
 
+# Dependency directories
+node_modules/
+**/node_modules/
+
+# Logs and Env
+*.log
+.env
+.env.*
+
 # IDE files
 .vscode/
 .idea/

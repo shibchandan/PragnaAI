@@ -1,0 +1,12 @@
+{
+  "name": "pragna-ai-backend",
+  "version": "1.0.0",
+  "description": "Express backend for PragnaAI Vector Retrieval Studio",
+  "main": "server.js",
+  "type": "module",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "http-proxy-middleware": "^3.0.3"
+  }
+}

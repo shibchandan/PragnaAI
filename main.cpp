@@ -6,6 +6,7 @@
 #include <cmath>
 #include <random>
 #include <chrono>
+#include <thread>
 #include <mutex>
 #include <unordered_map>
 #include <queue>
@@ -797,7 +798,15 @@ void loadDemo(VectorDB& db) {
 //  HTTP SERVER
 // =====================================================================
 
-int main() {
+int main(int argc, char* argv[]) {
+    int port = 8080;
+    if (argc > 1) {
+        try {
+            port = std::stoi(argv[1]);
+        } catch (...) {
+            std::cerr << "Invalid port argument: " << argv[1] << ", using default 8080" << std::endl;
+        }
+    }
     VectorDB   db(DIMS);
     DocumentDB docDB;
     OllamaClient ollama;
@@ -807,7 +816,7 @@ int main() {
     // Check Ollama at startup (non-fatal)
     bool ollamaUp = ollama.isAvailable();
     std::cout << "=== VectorDB Engine ===" << std::endl;
-    std::cout << "http://localhost:8080" << std::endl;
+    std::cout << "Listening on: http://localhost:" << port << std::endl;
     std::cout << db.size() << " demo vectors | " << DIMS << " dims | HNSW+KD-Tree+BruteForce" << std::endl;
     std::cout << "Ollama: " << (ollamaUp ? "ONLINE" : "OFFLINE (install from ollama.com)") << std::endl;
     if (ollamaUp) std::cout << "  embed model: " << ollama.embedModel
@@ -1138,6 +1147,19 @@ int main() {
     // Serve static files from the "ui" directory
     svr.set_mount_point("/", "./ui");
 
-    svr.listen("127.0.0.1", 8080);
+    // Automatically open browser on startup (Windows, Mac, Linux fallbacks)
+    std::thread launchThread([]() {
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+#ifdef _WIN32
+        system("start http://localhost:8080");
+#elif __APPLE__
+        system("open http://localhost:8080");
+#else
+        system("xdg-open http://localhost:8080");
+#endif
+    });
+    launchThread.detach();
+
+    svr.listen("127.0.0.1", port);
     return 0;
 }

@@ -7,11 +7,8 @@ try {
     try {
         Invoke-WebRequest -UseBasicParsing -TimeoutSec 2 http://127.0.0.1:8080/status | Out-Null
     } catch {
-        if (-not (Test-Path .\db.exe)) {
-            & .\build.ps1
-        }
-        $startedProcess = Start-Process -FilePath .\db.exe -PassThru -WindowStyle Hidden
-        Start-Sleep -Seconds 2
+        $startedProcess = Start-Process -FilePath node -ArgumentList "backend/server.js" -PassThru -WindowStyle Hidden
+        Start-Sleep -Seconds 4
     }
 
     $status = Invoke-RestMethod http://127.0.0.1:8080/status
