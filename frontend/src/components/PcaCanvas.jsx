@@ -377,12 +377,12 @@ const PcaCanvas = forwardRef(({
       <canvas
         ref={canvasRef}
         id="scatter"
-        onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
+        onPointerDown={handleMouseDown}
+        onPointerUp={handleMouseUp}
+        onPointerMove={handleMouseMove}
+        onPointerLeave={handleMouseLeave}
         onWheel={handleWheel}
-        style={{ display: 'block', width: '100%', height: '100%', flex: 1 }}
+        style={{ display: 'block', width: '100%', height: '100%', flex: 1, touchAction: 'none' }}
       />
       {hoverCard.show && (
         <div
