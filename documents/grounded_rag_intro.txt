@@ -1,0 +1,4 @@
+Retrieval-Augmented Generation (RAG) grounds Large Language Model responses in factual documents. 
+When a user asks a question, the system searches the HNSW index for the most relevant document chunks, 
+adds them to the prompt as context, and instructs the LLM to only answer using this context. 
+If no matches exist, the LLM reports that it has insufficient information, avoiding hallucinations.

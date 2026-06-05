@@ -573,33 +573,6 @@ export default function App() {
         </aside>
 
         <section className="stage">
-          <div className="stage-card">
-            <div className="hero-grid">
-              <div className="hero-copy">
-                <div className="eyebrow">Interactive retrieval cockpit</div>
-                <h2>Orbit the semantic space instead of staring at a flat scatter plot.</h2>
-                <p>The center visualization now renders a 3D projection of the vector field. Drag to rotate, scroll to zoom, and watch document chunks land directly inside the same semantic world as your demo vectors.</p>
-              </div>
-              <div className="hero-metrics">
-                <div className="metric-card">
-                  <div className="metric-label">Core search</div>
-                  <div className="metric-value">{selAlgo.toUpperCase()}</div>
-                  <div className="metric-sub">Switch between HNSW, KD-tree, and brute force without leaving the scene.</div>
-                </div>
-                <div className="metric-card">
-                  <div className="metric-label">Grounded RAG</div>
-                  <div className="metric-value">{ollamaStatus?.ollamaAvailable ? 'Online' : 'Offline'}</div>
-                  <div className="metric-sub">Answers stay tied to retrieved documents and report when no grounded match exists.</div>
-                </div>
-                <div className="metric-card">
-                  <div className="metric-label">Projection</div>
-                  <div className="metric-value">3D</div>
-                  <div className="metric-sub">Semantic points, query anchors, and live highlights all share one orbitable view.</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
           <div className="scene-card" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <PcaCanvas
               ref={pcaCanvasRef}

@@ -302,6 +302,8 @@ const PcaCanvas = forwardRef(({
   const handleMouseDown = (event) => {
     draggingRef.current = true;
     lastPointerRef.current = { x: event.clientX, y: event.clientY };
+    setHoverCard({ show: false, x: 0, y: 0, kind: '', title: '' });
+    onHoverItemChange(null);
   };
 
   const handleMouseUp = () => {
@@ -366,6 +368,8 @@ const PcaCanvas = forwardRef(({
     let newZoom = zoomRef.current + (event.deltaY > 0 ? -0.08 : 0.08);
     newZoom = Math.max(0.72, Math.min(1.9, newZoom));
     onCameraZoomChange(newZoom);
+    setHoverCard({ show: false, x: 0, y: 0, kind: '', title: '' });
+    onHoverItemChange(null);
   };
 
   return (

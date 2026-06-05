@@ -691,8 +691,73 @@ class DocumentDB {
     int nextId = 1;
     int dims   = 0;      // determined from first inserted embedding
 
+    void saveToFileUnlocked(const std::string& filepath) {
+        std::ofstream out(filepath, std::ios::binary);
+        if (!out) return;
+        int count = (int)store.size();
+        out.write((char*)&count, sizeof(count));
+        for (auto& [id, item] : store) {
+            out.write((char*)&item.id, sizeof(item.id));
+            int titleLen = (int)item.title.size();
+            out.write((char*)&titleLen, sizeof(titleLen));
+            out.write(item.title.data(), titleLen);
+            int textLen = (int)item.text.size();
+            out.write((char*)&textLen, sizeof(textLen));
+            out.write(item.text.data(), textLen);
+            int embLen = (int)item.emb.size();
+            out.write((char*)&embLen, sizeof(embLen));
+            if (embLen > 0) {
+                out.write((char*)item.emb.data(), embLen * sizeof(float));
+            }
+        }
+    }
+
+    void loadFromFileUnlocked(const std::string& filepath) {
+        std::ifstream in(filepath, std::ios::binary);
+        if (!in) return;
+        int count = 0;
+        in.read((char*)&count, sizeof(count));
+        if (in.gcount() != sizeof(count)) return;
+
+        store.clear();
+        hnsw = HNSW(16, 200);
+        bf = BruteForce();
+        nextId = 1;
+        dims = 0;
+
+        for (int i = 0; i < count; i++) {
+            DocItem item;
+            in.read((char*)&item.id, sizeof(item.id));
+            int titleLen = 0;
+            in.read((char*)&titleLen, sizeof(titleLen));
+            item.title.resize(titleLen);
+            in.read(&item.title[0], titleLen);
+            int textLen = 0;
+            in.read((char*)&textLen, sizeof(textLen));
+            item.text.resize(textLen);
+            in.read(&item.text[0], textLen);
+            int embLen = 0;
+            in.read((char*)&embLen, sizeof(embLen));
+            item.emb.resize(embLen);
+            if (embLen > 0) {
+                in.read((char*)&item.emb[0], embLen * sizeof(float));
+            }
+
+            if (dims == 0) dims = embLen;
+            store[item.id] = item;
+            if (item.id >= nextId) nextId = item.id + 1;
+
+            VectorItem vi{item.id, item.title, "doc", item.emb};
+            hnsw.insert(vi, cosine);
+            bf.insert(vi);
+        }
+        std::cout << "[DocumentDB] Loaded " << store.size() << " document chunks from persistence store." << std::endl;
+    }
+
 public:
-    DocumentDB() : hnsw(16, 200) {}
+    DocumentDB() : hnsw(16, 200) {
+        loadFromFileUnlocked("documents_db.bin");
+    }
 
     // Insert one chunk with its pre-computed embedding
     int insert(const std::string& title, const std::string& text,
@@ -705,6 +770,7 @@ public:
         VectorItem vi{item.id, title, "doc", emb};
         hnsw.insert(vi, cosine);
         bf.insert(vi);
+        saveToFileUnlocked("documents_db.bin");
         return item.id;
     }
 
@@ -727,6 +793,7 @@ public:
         std::lock_guard<std::mutex> lk(mu);
         if (!store.count(id)) return false;
         store.erase(id); hnsw.remove(id); bf.remove(id);
+        saveToFileUnlocked("documents_db.bin");
         return true;
     }
 

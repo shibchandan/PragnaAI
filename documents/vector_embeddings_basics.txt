@@ -1,0 +1,4 @@
+Vector embeddings are numerical representations of semantic meaning. 
+By translating text chunks into dense lists of numbers (usually 768 or 1536 dimensions), 
+machines can perform mathematical calculations to determine semantic similarity. 
+Cosine similarity measures the angle between these vectors, while Euclidean distance measures straight-line distance.

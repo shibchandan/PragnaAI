@@ -1,0 +1,4 @@
+PragnaAI Vector Retrieval Studio is a premium educational cockpit for orbiting semantic spaces. 
+It implements vector search algorithms including Hierarchical Navigable Small World (HNSW) graphs, 
+KD-Trees, and Brute-Force KNN searches from scratch in C++. 
+The front-end is built using React and renders a high-performance 3D PCA projection canvas.
