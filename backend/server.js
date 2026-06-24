@@ -109,6 +109,83 @@ app.use((req, res, next) => {
   next();
 });
 
+// POST /doc/upload
+// Accepts a base64 encoded file payload, decodes and writes it to documents/,
+// parses its content (extracting PDF text or loading text/markdown),
+// and pushes it to the C++ microservice vector database.
+app.post('/doc/upload', express.json({ limit: '20mb' }), async (req, res) => {
+  const { filename, filedata } = req.body;
+  if (!filename || !filedata) {
+    return res.status(400).json({ error: 'Missing filename or filedata payload' });
+  }
+
+  const allowedExts = ['.pdf', '.txt', '.md'];
+  const ext = path.extname(filename).toLowerCase();
+  if (!allowedExts.includes(ext)) {
+    return res.status(400).json({ error: `File type ${ext} is not supported. Please upload a PDF, TXT, or MD file.` });
+  }
+
+  try {
+    const docsDir = path.resolve(__dirname, '../documents');
+    if (!fs.existsSync(docsDir)) {
+      fs.mkdirSync(docsDir);
+    }
+
+    const filePath = path.join(docsDir, filename);
+    const buffer = Buffer.from(filedata, 'base64');
+    fs.writeFileSync(filePath, buffer);
+    console.log(`[Express Gateway] Wrote uploaded file to documents/${filename} (${buffer.length} bytes)`);
+
+    // Fetch existing documents from C++ database to avoid duplicate indexing
+    let existingDocs = [];
+    try {
+      const listRes = await fetch(`http://127.0.0.1:${CPP_PORT}/doc/list`);
+      if (listRes.ok) {
+        existingDocs = await listRes.json();
+      }
+    } catch (fetchError) {
+      console.warn('[Express Gateway] Warning: Could not fetch existing documents for duplicate checks:', fetchError.message);
+    }
+
+    const alreadyIndexed = existingDocs.some(d => d.title === filename || d.title.startsWith(filename + ' ['));
+    if (alreadyIndexed) {
+      return res.status(409).json({ error: `File "${filename}" is already indexed in the vector database.` });
+    }
+
+    let text = '';
+    if (ext === '.pdf') {
+      const pdfData = await pdf(buffer);
+      text = pdfData.text.trim();
+    } else {
+      text = buffer.toString('utf-8').trim();
+    }
+
+    if (!text) {
+      return res.status(400).json({ error: 'Extracted text content from the uploaded file is empty.' });
+    }
+
+    console.log(`[Express Gateway] Upload indexing "${filename}" (${text.length} characters)...`);
+    const response = await fetch(`http://127.0.0.1:${CPP_PORT}/doc/insert`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: filename, text })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log(`[Express Gateway] Successfully indexed "${filename}". Created chunk IDs: ${JSON.stringify(data.ids)}`);
+      res.json({ success: true, chunks: data.chunks, dims: data.dims, ids: data.ids });
+    } else {
+      const errText = await response.text();
+      console.error(`[Express Gateway] C++ indexing error:`, errText);
+      res.status(500).json({ error: `C++ vector engine error: ${errText}` });
+    }
+  } catch (error) {
+    console.error(`[Express Gateway] File upload / indexing failed:`, error);
+    res.status(500).json({ error: `Server error during indexing: ${error.message}` });
+  }
+});
+
 // Serve static React web app from ../ui
 app.use(express.static(path.resolve(__dirname, '../ui')));
 

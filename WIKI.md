@@ -167,7 +167,10 @@ The HTML5 Canvas visualizes these projected points by transforming them from 3D 
 PragnaAI implements a fully grounded offline RAG pipeline to prevent Large Language Model hallucinations:
 
 ```
-[Injest Document (.pdf/.md/.txt)]
+[Ingest Document (UI Drag & Drop or Startup Folder)]
+        │
+        ▼
+[Decoded Base64 Buffer / PDF Text Parsing]
         │
         ▼
 [Semantic Chunking (250 words, 30 overlap)]
@@ -197,7 +200,7 @@ PragnaAI implements a fully grounded offline RAG pipeline to prevent Large Langu
 ```
 
 ### Ingestion Details:
-1.  **Parsing**: The Express server reads standard text or parses binary PDF buffers into text using `pdf-parse`.
+1.  **Parsing**: The Express server supports both startup directory scanning and real-time frontend Drag-and-Drop file uploads (sent via Base64 JSON payloads to the `/doc/upload` gateway endpoint). It decodes payloads into binary buffers and uses `pdf-parse` (for `.pdf` files) or character decoding (for `.txt` and `.md`) to extract clean text content.
 2.  **Chunking**: In the C++ database, raw text is tokenized into word blocks. Words are chunked into windows of **250 words** with a sliding **30-word overlap** to preserve semantic continuity across borders.
 3.  **Graph Insertion**: Each chunk is embedded via Ollama's `/api/embeddings` endpoint, inserted as a `DocItem` into the HNSW graph (calculated with Cosine Similarity), and saved to the binary database.
 
@@ -349,3 +352,11 @@ export function powerIter(centered, basis) {
 > 2. The render function runs inside a `requestAnimationFrame` loop.
 > 3. In each draw frame, we reuse projection buffers rather than allocating new objects.
 > 4. We calculate perspective coefficients and paint points directly using standard 2D canvas drawing operations (`arc`, `fill`), ordering points by depth ($z_{\text{rot}}$) to draw background elements first (Painter's Algorithm), ensuring proper transparency rendering without WebGL overhead.
+
+#### Q11: Explain how you implemented the drag-and-drop file upload pipeline. How does the frontend send binary files (like PDFs) to the server without standard multipart form data libraries like Multer?
+> **Answer**: To avoid adding bulky multipart parsing libraries (like Multer) to our Node server, we implemented a custom base64-encoded JSON pipeline:
+> 1. On the client side, the HTML5 Drag-and-Drop API catches files via `onDrop` events.
+> 2. A React helper reads the local file using a JavaScript `FileReader` via `readAsDataURL(file)`. This converts the binary file into a data URL containing base64 string bytes.
+> 3. The client sends a `POST /doc/upload` JSON request carrying the file name and base64 payload to the Express gateway.
+> 4. Express decodes the payload into a native binary buffer (`Buffer.from(filedata, 'base64')`), writes it directly to the local `documents/` folder, and uses `pdf-parse` or UTF-8 decoding to extract text.
+> 5. Finally, Express proxies the clean text content to the C++ microservice via HTTP. The C++ database chunks it, embeds it via Ollama, and rebuilds the HNSW graph, returning the new chunk IDs. The React client then refreshes the visual 3D coordinate map.

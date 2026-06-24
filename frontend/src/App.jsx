@@ -97,6 +97,11 @@ export default function App() {
   const [ragQuestion, setRagQuestion] = useState('');
   const [ragK, setRagK] = useState(3);
 
+  // Drag and Drop Upload States
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState('');
+  const [uploadError, setUploadError] = useState('');
+
   // API Status states
   const [isEmbedding, setIsEmbedding] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
@@ -320,6 +325,89 @@ export default function App() {
       console.error(error);
     }
     setIsEmbedding(false);
+  };
+
+  // Drag and Drop Upload Handlers
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const files = e.dataTransfer.files;
+    if (files.length) {
+      await processUploadFile(files[0]);
+    }
+  };
+
+  const handleFileSelect = async (e) => {
+    const files = e.target.files;
+    if (files.length) {
+      await processUploadFile(files[0]);
+    }
+  };
+
+  const processUploadFile = async (file) => {
+    setUploadError('');
+    setUploadProgress(`Reading "${file.name}"...`);
+    
+    const allowed = ['.pdf', '.txt', '.md'];
+    const ext = '.' + file.name.split('.').pop().toLowerCase();
+    if (!allowed.includes(ext)) {
+      setUploadError(`File type ${ext} is not supported. Please upload a PDF, TXT, or MD file.`);
+      setUploadProgress('');
+      return;
+    }
+
+    const reader = new FileReader();
+    
+    reader.onload = async (e) => {
+      try {
+        const rawResult = e.target.result;
+        const base64Data = rawResult.split(',')[1];
+        
+        setUploadProgress(`Uploading and indexing "${file.name}" via Ollama...`);
+        setIsEmbedding(true);
+        
+        const response = await fetch(`${API}/doc/upload`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            filename: file.name,
+            filedata: base64Data
+          })
+        });
+        
+        const data = await response.json();
+        setIsEmbedding(false);
+        
+        if (!response.ok) {
+          setUploadError(data.error || 'Server returned an error during indexing.');
+          setUploadProgress('');
+        } else {
+          setUploadProgress(`Successfully parsed and indexed "${file.name}" into ${data.chunks} chunk(s).`);
+          await loadItems();
+          await checkOllamaStatus();
+        }
+      } catch (err) {
+        setIsEmbedding(false);
+        setUploadError(`Upload failed: ${err.message}`);
+        setUploadProgress('');
+      }
+    };
+    
+    reader.onerror = () => {
+      setUploadError('Failed to read file from disk.');
+      setUploadProgress('');
+    };
+    
+    reader.readAsDataURL(file);
   };
 
   const deleteDoc = async (id) => {
@@ -770,7 +858,53 @@ export default function App() {
                 </div>
 
                 <div className="panel-card card stack">
-                  <div className="section-title">Insert Document</div>
+                  <div className="section-title">Upload Local Files (.pdf, .txt, .md)</div>
+                  <div 
+                    className={`upload-zone ${isDragging ? 'dragover' : ''}`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    style={{
+                      border: '2px dashed rgba(139, 170, 205, 0.25)',
+                      borderRadius: '12px',
+                      padding: '24px 16px',
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                      background: isDragging ? 'rgba(73, 214, 255, 0.05)' : 'rgba(5, 12, 20, 0.3)',
+                      transition: 'all 0.2s ease',
+                      position: 'relative'
+                    }}
+                    onClick={() => document.getElementById('file-input').click()}
+                  >
+                    <input 
+                      type="file" 
+                      id="file-input" 
+                      accept=".pdf,.txt,.md" 
+                      style={{ display: 'none' }} 
+                      onChange={handleFileSelect} 
+                    />
+                    <div style={{ fontSize: '28px', marginBottom: '8px' }}>📂</div>
+                    <strong style={{ display: 'block', fontSize: '13px', color: 'var(--text)' }}>
+                      Drag & Drop File Here
+                    </strong>
+                    <span style={{ fontSize: '11px', color: 'var(--text-dim)', marginTop: '4px', display: 'block' }}>
+                      or click to browse local files
+                    </span>
+                  </div>
+                  {uploadProgress && (
+                    <div className="status-note" style={{ color: '#73f0aa', marginTop: '4px' }}>
+                      {uploadProgress}
+                    </div>
+                  )}
+                  {uploadError && (
+                    <div className="status-note" style={{ color: 'var(--rose)', marginTop: '4px' }}>
+                      {uploadError}
+                    </div>
+                  )}
+                </div>
+
+                <div className="panel-card card stack">
+                  <div className="section-title">Or Paste Document Text</div>
                   <label>
                     Title
                     <input
