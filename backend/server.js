@@ -119,22 +119,46 @@ app.post('/doc/upload', express.json({ limit: '20mb' }), async (req, res) => {
     return res.status(400).json({ error: 'Missing filename or filedata payload' });
   }
 
+  // 1. Path Traversal Protection
+  // Strips directory traversal path segments (e.g. "../../") to prevent writing files outside the documents/ folder
+  const safeFilename = path.basename(filename);
+
   const allowedExts = ['.pdf', '.txt', '.md'];
-  const ext = path.extname(filename).toLowerCase();
+  const ext = path.extname(safeFilename).toLowerCase();
   if (!allowedExts.includes(ext)) {
     return res.status(400).json({ error: `File type ${ext} is not supported. Please upload a PDF, TXT, or MD file.` });
   }
 
   try {
+    const buffer = Buffer.from(filedata, 'base64');
+
+    // 2. File Size Enforcement (Max 5MB)
+    if (buffer.length > 5 * 1024 * 1024) {
+      return res.status(400).json({ error: 'Security Alert: File size exceeds the maximum limit of 5MB.' });
+    }
+
+    // 3. Binary Magic Bytes Validation
+    if (ext === '.pdf') {
+      // PDF Magic bytes check: First 4 bytes must be "%PDF" (hex: 25 50 44 46)
+      if (buffer.length < 4 || buffer.readUInt32BE(0) !== 0x25504446) {
+        return res.status(400).json({ error: 'Security Alert: Invalid PDF file signature. Upload rejected.' });
+      }
+    } else {
+      // For .txt and .md, ensure it does not contain binary null bytes (0x00)
+      // This stops executables or object files from being renamed as text documents
+      if (buffer.includes(0x00)) {
+        return res.status(400).json({ error: 'Security Alert: Binary null-bytes detected in text document. Upload rejected.' });
+      }
+    }
+
     const docsDir = path.resolve(__dirname, '../documents');
     if (!fs.existsSync(docsDir)) {
       fs.mkdirSync(docsDir);
     }
 
-    const filePath = path.join(docsDir, filename);
-    const buffer = Buffer.from(filedata, 'base64');
+    const filePath = path.join(docsDir, safeFilename);
     fs.writeFileSync(filePath, buffer);
-    console.log(`[Express Gateway] Wrote uploaded file to documents/${filename} (${buffer.length} bytes)`);
+    console.log(`[Express Gateway] Wrote uploaded file to documents/${safeFilename} (${buffer.length} bytes)`);
 
     // Fetch existing documents from C++ database to avoid duplicate indexing
     let existingDocs = [];
@@ -147,9 +171,9 @@ app.post('/doc/upload', express.json({ limit: '20mb' }), async (req, res) => {
       console.warn('[Express Gateway] Warning: Could not fetch existing documents for duplicate checks:', fetchError.message);
     }
 
-    const alreadyIndexed = existingDocs.some(d => d.title === filename || d.title.startsWith(filename + ' ['));
+    const alreadyIndexed = existingDocs.some(d => d.title === safeFilename || d.title.startsWith(safeFilename + ' ['));
     if (alreadyIndexed) {
-      return res.status(409).json({ error: `File "${filename}" is already indexed in the vector database.` });
+      return res.status(409).json({ error: `File "${safeFilename}" is already indexed in the vector database.` });
     }
 
     let text = '';
@@ -164,16 +188,19 @@ app.post('/doc/upload', express.json({ limit: '20mb' }), async (req, res) => {
       return res.status(400).json({ error: 'Extracted text content from the uploaded file is empty.' });
     }
 
-    console.log(`[Express Gateway] Upload indexing "${filename}" (${text.length} characters)...`);
+    // 4. HTML script-tag injection sanitization (XSS protection)
+    const sanitizedText = text.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+
+    console.log(`[Express Gateway] Upload indexing "${safeFilename}" (${sanitizedText.length} characters)...`);
     const response = await fetch(`http://127.0.0.1:${CPP_PORT}/doc/insert`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: filename, text })
+      body: JSON.stringify({ title: safeFilename, text: sanitizedText })
     });
 
     if (response.ok) {
       const data = await response.json();
-      console.log(`[Express Gateway] Successfully indexed "${filename}". Created chunk IDs: ${JSON.stringify(data.ids)}`);
+      console.log(`[Express Gateway] Successfully indexed "${safeFilename}". Created chunk IDs: ${JSON.stringify(data.ids)}`);
       res.json({ success: true, chunks: data.chunks, dims: data.dims, ids: data.ids });
     } else {
       const errText = await response.text();
